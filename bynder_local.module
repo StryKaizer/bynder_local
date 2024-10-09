@@ -65,16 +65,17 @@ function bynder_local_bynder_media_update_alter(MediaInterface $media, array $it
 
     if ($media->get('field_bynder_image')->entity) {
 
-      // Check if the focal point has changed.
-      if (\Drupal::moduleHandler()->moduleExists('focal_point')) {
+      // Update Focal point if it has changed.
+      if (\Drupal::moduleHandler()->moduleExists('focal_point') && isset($item["activeOriginalFocusPoint"]["x"])) {
         /** @var \Drupal\focal_point\FocalPointManagerInterface $focal_point_manager */
         $focal_point_manager = \Drupal::service('focal_point.manager');
         $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
-        $initial_crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
-        $focal_point_manager->saveCropEntity($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"], $initial_crop);
-        $saved_crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
-        if($initial_crop->get('x')->value != $saved_crop->get('x')->value || $initial_crop->get('y')->value != $saved_crop->get('y')->value) {
-          // Retrigger media update to purge existing crop.
+        $crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
+        $position = $crop->position();
+        $original_relative_position = $focal_point_manager->absoluteToRelative($position['x'], $position['y'], $item["width"], $item["height"]);
+        $new_relative_position = $focal_point_manager->absoluteToRelative($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"]);
+        if($original_relative_position['x'] != $new_relative_position['x'] || $original_relative_position['y'] != $new_relative_position['y']) {
+          $focal_point_manager->saveCropEntity($new_relative_position["x"], $new_relative_position['y'], $media->get('field_bynder_image')->width, $media->get('field_bynder_image')->height, $crop);
           $has_changed = TRUE;
         }
       }
@@ -111,13 +112,14 @@ function bynder_local_bynder_media_update_alter(MediaInterface $media, array $it
 
       $media->set('field_bynder_image', $file);
 
-      // Store focal point for new image.
-      if (\Drupal::moduleHandler()->moduleExists('focal_point')) {
+      // Store Focal point.
+      if (\Drupal::moduleHandler()->moduleExists('focal_point') && isset($item["activeOriginalFocusPoint"]["x"])) {
         /** @var \Drupal\focal_point\FocalPointManagerInterface $focal_point_manager */
         $focal_point_manager = \Drupal::service('focal_point.manager');
         $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
-        $initial_crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
-        $focal_point_manager->saveCropEntity($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"], $initial_crop);
+        $crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
+        $relative_position = $focal_point_manager->absoluteToRelative($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"]);
+        $focal_point_manager->saveCropEntity($relative_position["x"], $relative_position['y'], $media->get('field_bynder_image')->width, $media->get('field_bynder_image')->height, $crop);
       }
 
       $has_changed = TRUE;
