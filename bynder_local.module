@@ -62,9 +62,24 @@ function bynder_local_bynder_media_update_alter(MediaInterface $media, array $it
       return;
     }
 
-    // Check the asset date, if it changed after the local file or if there is
-    // no local file, fetch it again.
     if ($media->get('field_bynder_image')->entity) {
+
+      // Check if the focal point has changed.
+      if (\Drupal::moduleHandler()->moduleExists('focal_point')) {
+        /** @var \Drupal\focal_point\FocalPointManagerInterface $focal_point_manager */
+        $focal_point_manager = \Drupal::service('focal_point.manager');
+        $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
+        $initial_crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
+        $focal_point_manager->saveCropEntity($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"], $initial_crop);
+        $saved_crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
+        if($initial_crop->get('x')->value != $saved_crop->get('x')->value || $initial_crop->get('y')->value != $saved_crop->get('y')->value) {
+          // Retrigger media update to purge existing crop.
+          $has_changed = TRUE;
+        }
+      }
+
+      // Check the asset date, if it changed after the local file or if there is
+      // no local file, fetch it again.
       try {
         $modified = new DateTime($item['dateModified']);
         if ($modified->getTimestamp() < $media->get('field_bynder_image')->entity->getCreatedTime()) {
@@ -93,6 +108,16 @@ function bynder_local_bynder_media_update_alter(MediaInterface $media, array $it
       }
 
       $media->set('field_bynder_image', $file);
+
+      // Store focal point for new image.
+      if (\Drupal::moduleHandler()->moduleExists('focal_point')) {
+        /** @var \Drupal\focal_point\FocalPointManagerInterface $focal_point_manager */
+        $focal_point_manager = \Drupal::service('focal_point.manager');
+        $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
+        $initial_crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
+        $focal_point_manager->saveCropEntity($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"], $initial_crop);
+      }
+
       $has_changed = TRUE;
     }
   }
