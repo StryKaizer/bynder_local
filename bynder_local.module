@@ -38,7 +38,8 @@ function bynder_local_media_presave(MediaInterface $media) {
 
     Drupal::service('file_system')->prepareDirectory($location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
     if ($data = (string) \Drupal::httpClient()->get($image_url)->getBody()) {
-      $file = Drupal::service('file.repository')->writeData($data, $location, FileSystemInterface::EXISTS_REPLACE);
+      $destination = $location . '/' . basename(parse_url($image_url, PHP_URL_PATH));
+      $file = Drupal::service('file.repository')->writeData($data, $destination, FileSystemInterface::EXISTS_REPLACE);
       $media->set('field_bynder_image', $file);
     }
   }
@@ -98,7 +99,8 @@ function bynder_local_bynder_media_update_alter(MediaInterface $media, array $it
 
     Drupal::service('file_system')->prepareDirectory($location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
     if ($data = (string) \Drupal::httpClient()->get($image_url)->getBody()) {
-      $file = Drupal::service('file.repository')->writeData($data, $location, FileSystemInterface::EXISTS_REPLACE);
+      $destination = $location . '/' . basename(parse_url($image_url, PHP_URL_PATH));
+      $file = Drupal::service('file.repository')->writeData($data, $destination, FileSystemInterface::EXISTS_REPLACE);
 
       // If there already is a local file, mark it as temporary.
       if ($media->get('field_bynder_image')->entity) {
