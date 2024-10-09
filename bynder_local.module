@@ -59,24 +59,25 @@ function bynder_local_bynder_media_update_alter(MediaInterface $media, array $it
       return;
     }
 
-    // Update Focal point if it has changed.
-    if (\Drupal::moduleHandler()->moduleExists('focal_point') && isset($item["activeOriginalFocusPoint"]["x"])) {
-      /** @var \Drupal\focal_point\FocalPointManagerInterface $focal_point_manager */
-      $focal_point_manager = \Drupal::service('focal_point.manager');
-      $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
-      $crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
-      $position = $crop->position();
-      $original_relative_position = $focal_point_manager->absoluteToRelative($position['x'], $position['y'], $item["width"], $item["height"]);
-      $new_relative_position = $focal_point_manager->absoluteToRelative($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"]);
-      if($original_relative_position['x'] != $new_relative_position['x'] || $original_relative_position['y'] != $new_relative_position['y']) {
-        $focal_point_manager->saveCropEntity($new_relative_position["x"], $new_relative_position['y'], $media->get('field_bynder_image')->width, $media->get('field_bynder_image')->height, $crop);
-        $has_changed = TRUE;
-      }
-    }
-
-    // Check the asset date, if it changed after the local file or if there is
-    // no local file, fetch it again.
     if ($media->get('field_bynder_image')->entity) {
+
+      // Update Focal point if it has changed.
+      if (\Drupal::moduleHandler()->moduleExists('focal_point') && isset($item["activeOriginalFocusPoint"]["x"])) {
+        /** @var \Drupal\focal_point\FocalPointManagerInterface $focal_point_manager */
+        $focal_point_manager = \Drupal::service('focal_point.manager');
+        $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
+        $crop = $focal_point_manager->getCropEntity($media->get('field_bynder_image')->entity, $crop_type);
+        $position = $crop->position();
+        $original_relative_position = $focal_point_manager->absoluteToRelative($position['x'], $position['y'], $item["width"], $item["height"]);
+        $new_relative_position = $focal_point_manager->absoluteToRelative($item["activeOriginalFocusPoint"]["x"], $item["activeOriginalFocusPoint"]["y"], $item["width"], $item["height"]);
+        if($original_relative_position['x'] != $new_relative_position['x'] || $original_relative_position['y'] != $new_relative_position['y']) {
+          $focal_point_manager->saveCropEntity($new_relative_position["x"], $new_relative_position['y'], $media->get('field_bynder_image')->width, $media->get('field_bynder_image')->height, $crop);
+          $has_changed = TRUE;
+        }
+      }
+
+      // Check the asset date, if it changed after the local file or if there is
+      // no local file, fetch it again.
       try {
         $modified = new \DateTime($item['dateModified']);
         if ($modified->getTimestamp() < $media->get('field_bynder_image')->entity->getCreatedTime()) {
